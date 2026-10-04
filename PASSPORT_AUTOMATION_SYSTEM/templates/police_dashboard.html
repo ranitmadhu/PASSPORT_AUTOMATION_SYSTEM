@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Local Police Verification Portal - PAS{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+  <div>
+    <h2>Local Police Background Check Portal</h2>
+    <p style="color: var(--text-muted);">
+      Officer: <strong>{{ officer.full_name }}</strong> | Station / Jurisdiction PIN: <code>{{ officer.jurisdiction_pin or 'All Stations' }}</code>
+    </p>
+  </div>
+</div>
+
+<!-- Pending Police Verification Queue -->
+<div class="card">
+  <div class="card-header" style="background-color: var(--info-bg);">
+    <h3 style="color: var(--info-text);">👮 Background Check Requests Queue</h3>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    {% if pending_verifications %}
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>App #</th>
+              <th>Applicant Name</th>
+              <th>Father's Name</th>
+              <th>Present Address</th>
+              <th>PIN Code</th>
+              <th>Target Police Station</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for app_item in pending_verifications %}
+              <tr>
+                <td><strong>{{ app_item.application_number }}</strong></td>
+                <td>{{ app_item.given_name }} {{ app_item.surname }}</td>
+                <td>{{ app_item.father_name or 'N/A' }}</td>
+                <td>{{ app_item.present_address }}</td>
+                <td><code>{{ app_item.pin_code }}</code></td>
+                <td>{{ app_item.police_station_name }}</td>
+                <td>
+                  <a href="{{ url_for('application_detail', app_id=app_item.id) }}" class="btn btn-sm btn-primary">📄 File PVR & Docs ({{ app_item.documents|length }})</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="padding: 3rem; text-align: center; color: var(--text-muted);">
+        <p style="font-size: 1.1rem;">No pending police background check requests assigned to your station PIN.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Completed Police Verification Reports -->
+<div class="card">
+  <div class="card-header">
+    <h3>Submitted Police Verification Reports (PVR)</h3>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    {% if completed_verifications %}
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>App #</th>
+              <th>Applicant Name</th>
+              <th>PVR Status</th>
+              <th>Address Verified</th>
+              <th>Criminal Records</th>
+              <th>Officer Remarks</th>
+              <th>Submitted Date</th>
+              <th>View</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for app_item in completed_verifications %}
+              <tr>
+                <td><strong>{{ app_item.application_number }}</strong></td>
+                <td>{{ app_item.given_name }} {{ app_item.surname }}</td>
+                <td>
+                  {% if app_item.police_report.verification_status == 'clear' %}
+                    <span class="badge badge-police_approved">CLEAR</span>
+                  {% elif app_item.police_report.verification_status == 'adverse' %}
+                    <span class="badge badge-police_rejected">ADVERSE</span>
+                  {% else %}
+                    <span class="badge badge-submitted">INCOMPLETE</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if app_item.police_report.address_verified %}
+                    <span style="color: green; font-weight: bold;">Yes</span>
+                  {% else %}
+                    <span style="color: red;">No</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if app_item.police_report.criminal_records_found %}
+                    <span style="color: red; font-weight: bold;">FOUND</span>
+                  {% else %}
+                    <span style="color: green;">None</span>
+                  {% endif %}
+                </td>
+                <td>{{ app_item.police_report.remarks or 'N/A' }}</td>
+                <td>{{ app_item.police_report.submitted_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>
+                  <a href="{{ url_for('application_detail', app_id=app_item.id) }}" class="btn btn-sm btn-outline">View Details</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="padding: 2rem; text-align: center; color: var(--text-muted);">
+        <p>No submitted police reports logged by your officer account yet.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

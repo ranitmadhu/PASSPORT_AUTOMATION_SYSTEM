@@ -1,0 +1,411 @@
+{% extends "base.html" %}
+
+{% block title %}Application Details - {{ application.application_number }}{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1rem;">
+  <a href="{{ url_for('dashboard') }}" style="font-weight: 600;">&larr; Back to Dashboard</a>
+</div>
+
+<!-- Header Info Banner -->
+<div class="card" style="border-top: 5px solid var(--primary-light);">
+  <div class="card-body">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <h2 style="color: var(--primary-dark);">Application #{{ application.application_number }}</h2>
+        <p style="color: var(--text-muted);">
+          Applicant: <strong>{{ application.given_name }} {{ application.surname }}</strong> &bull; 
+          Type: <strong>{{ application.application_type.upper() }} ({{ application.passport_type.replace('_', ' ').upper() }})</strong> &bull;
+          Submitted: <strong>{{ application.created_at.strftime('%Y-%m-%d %H:%M') }}</strong>
+        </p>
+      </div>
+
+      <div style="text-align: right;">
+        <span class="badge badge-{{ application.status }}" style="font-size: 1rem; padding: 0.5rem 1rem;">
+          STATUS: {{ application.status.replace('_', ' ').upper() }}
+        </span>
+        
+        {% if application.passport_number %}
+          <div style="margin-top: 0.5rem; background-color: var(--success-bg); color: var(--success-text); padding: 0.5rem 1rem; border-radius: 6px; font-weight: 700;">
+            PASSPORT NUMBER: {{ application.passport_number }}
+            <div style="font-size: 0.8rem; font-weight: normal;">Valid: {{ application.issue_date }} to {{ application.expiry_date }}</div>
+          </div>
+        {% endif %}
+
+        {% if application.dispatch_tracking_id %}
+          <div style="margin-top: 0.35rem; background-color: var(--info-bg); color: var(--info-text); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.85rem; font-weight: 600;">
+            SPEED POST TRACKING: {{ application.dispatch_tracking_id }}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Stepper Tracker -->
+    <div class="stepper" style="margin-top: 2rem;">
+      <div class="step {% if application.status not in ['submitted'] %}completed{% else %}active{% endif %}">
+        <div class="step-circle">1</div>
+        <div class="step-label">1. Submission</div>
+      </div>
+      
+      <div class="step {% if application.status in ['initial_check_passed', 'regional_review_pending', 'regional_approved', 'police_verification_pending', 'police_approved', 'appointment_scheduled', 'approved_for_issuance', 'passport_issued', 'dispatched'] %}completed{% elif application.status == 'initial_check_failed' %}active{% endif %}">
+        <div class="step-circle">2</div>
+        <div class="step-label">2. Initial DB Check</div>
+      </div>
+      
+      <div class="step {% if application.status in ['regional_approved', 'police_verification_pending', 'police_approved', 'appointment_scheduled', 'approved_for_issuance', 'passport_issued', 'dispatched'] %}completed{% elif application.status in ['regional_review_pending', 'regional_flagged'] %}active{% endif %}">
+        <div class="step-circle">3</div>
+        <div class="step-label">3. Regional MEA Review</div>
+      </div>
+      
+      <div class="step {% if application.status in ['police_approved', 'appointment_scheduled', 'approved_for_issuance', 'passport_issued', 'dispatched'] %}completed{% elif application.status in ['police_verification_pending', 'police_rejected'] %}active{% endif %}">
+        <div class="step-circle">4</div>
+        <div class="step-label">4. Police Clearance</div>
+      </div>
+
+      <div class="step {% if application.status in ['passport_issued', 'dispatched'] %}completed{% elif application.status == 'appointment_scheduled' %}active{% endif %}">
+        <div class="step-circle">5</div>
+        <div class="step-label">5. Appointment & Issuance</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Rejection Warning Banner -->
+{% if application.status == 'rejected' or application.rejection_reason %}
+  <div class="alert alert-danger" style="margin-bottom: 1.5rem;">
+    <div>
+      <strong>Application Rejected:</strong> {{ application.rejection_reason }}
+    </div>
+  </div>
+{% endif %}
+
+<!-- Automated DB Check Results Banner -->
+{% if application.auto_check_notes %}
+  <div class="card" style="border-left: 5px solid {% if application.auto_check_status == 'passed' %}#10b981{% else %}#ef4444{% endif %};">
+    <div class="card-body" style="padding: 1rem 1.5rem;">
+      <h4 style="margin-bottom: 0.25rem;">Automated Database Verification Result</h4>
+      <p style="font-size: 0.95rem;">{{ application.auto_check_notes }}</p>
+    </div>
+  </div>
+{% endif %}
+
+<!-- CONTEXTUAL ROLE ACTION PANELS -->
+
+<!-- 1. APPLICANT ACTION PANEL: SCHEDULE APPOINTMENT -->
+{% if session.get('user_role') == 'applicant' and application.status in ['police_approved', 'regional_approved', 'initial_check_passed', 'submitted', 'appointment_scheduled'] %}
+  <div class="card" style="background-color: #f0f9ff; border: 1px solid #bae6fd;">
+    <div class="card-header" style="background-color: #e0f2fe;">
+      <h3 style="color: #0369a1;">🗓️ Schedule Passport Office Appointment</h3>
+    </div>
+    <div class="card-body">
+      {% if application.appointment %}
+        <div style="background: white; padding: 1rem; border-radius: 6px; margin-bottom: 1rem; border: 1px solid #cbd5e1;">
+          <p><strong>Current Appointment Scheduled:</strong></p>
+          <p style="font-size: 1.1rem; color: var(--primary-dark); font-weight: bold;">
+            📅 Date: {{ application.appointment.appointment_date }} | ⏰ Time Slot: {{ application.appointment.time_slot }}
+          </p>
+          <p style="color: var(--text-muted);">Location: {{ application.appointment.office_location }}</p>
+        </div>
+      {% endif %}
+
+      <form method="POST" action="{{ url_for('applicant_schedule_appointment', app_id=application.id) }}">
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label">Select Date *</label>
+            <input type="date" name="appointment_date" class="form-control" required min="{{ today_str }}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Time Slot *</label>
+            <select name="time_slot" class="form-select" required>
+              <option value="09:30 AM - 10:30 AM">09:30 AM - 10:30 AM</option>
+              <option value="11:00 AM - 12:00 PM">11:00 AM - 12:00 PM</option>
+              <option value="02:00 PM - 03:00 PM">02:00 PM - 03:00 PM</option>
+              <option value="03:30 PM - 04:30 PM">03:30 PM - 04:30 PM</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Passport Seva Kendra (PSK) Office Location</label>
+            <input type="text" name="office_location" class="form-control" value="Regional Passport Office (PSK - Main Branch)" required>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">
+          {% if application.appointment %}Reschedule Appointment{% else %}Confirm & Schedule Appointment{% endif %}
+        </button>
+      </form>
+    </div>
+  </div>
+{% endif %}
+
+<!-- 2. PASSPORT ADMIN ACTION PANEL -->
+{% if session.get('user_role') == 'passport_admin' %}
+  <div class="card" style="border: 2px solid var(--primary-light);">
+    <div class="card-header" style="background-color: var(--primary-dark); color: white;">
+      <h3>🛂 Passport Administrator Management Controls</h3>
+    </div>
+    <div class="card-body">
+      <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+        
+        <!-- Run Automated DB Checks -->
+        <form method="POST" action="{{ url_for('run_auto_check', app_id=application.id) }}">
+          <button type="submit" class="btn btn-primary">⚡ Run Automated DB Checks</button>
+        </form>
+
+        <!-- Route to Regional MEA -->
+        <form method="POST" action="{{ url_for('route_to_regional', app_id=application.id) }}">
+          <button type="submit" class="btn btn-secondary">🏛️ Forward to Regional MEA</button>
+        </form>
+
+        <!-- Route to Police Station -->
+        <form method="POST" action="{{ url_for('route_to_police', app_id=application.id) }}">
+          <button type="submit" class="btn btn-secondary">👮 Request Police Verification</button>
+        </form>
+
+        <!-- Final Approval & Issuance -->
+        {% if application.status not in ['passport_issued', 'dispatched', 'rejected'] %}
+          <form method="POST" action="{{ url_for('approve_and_issue', app_id=application.id) }}">
+            <button type="submit" class="btn btn-success">✅ Final Approve & Issue Passport</button>
+          </form>
+        {% endif %}
+      </div>
+
+      <!-- Postal Dispatch Tracking Form -->
+      {% if application.status == 'passport_issued' %}
+        <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid var(--border-color);">
+        <form method="POST" action="{{ url_for('dispatch_passport', app_id=application.id) }}" style="display: flex; gap: 1rem; align-items: flex-end; max-width: 600px;">
+          <div style="flex: 1;">
+            <label class="form-label">Speed Post Tracking Barcode / ID</label>
+            <input type="text" name="tracking_id" class="form-control" placeholder="e.g. SPEEDPOST-IN-8492019" required>
+          </div>
+          <button type="submit" class="btn btn-primary">Mark as Dispatched</button>
+        </form>
+      {% endif %}
+
+      <!-- Rejection Form Modal Trigger -->
+      {% if application.status not in ['rejected', 'dispatched'] %}
+        <hr style="margin: 1.5rem 0; border: none; border-top: 1px solid var(--border-color);">
+        <form method="POST" action="{{ url_for('reject_application', app_id=application.id) }}" onsubmit="return confirm('Are you sure you want to reject this passport application?');" style="display: flex; gap: 1rem; align-items: flex-end; max-width: 600px;">
+          <div style="flex: 1;">
+            <label class="form-label">Rejection Reason</label>
+            <input type="text" name="rejection_reason" class="form-control" placeholder="Specify statutory rejection reason" required>
+          </div>
+          <button type="submit" class="btn btn-danger">Reject Application</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+{% endif %}
+
+<!-- 3. REGIONAL ADMIN (MEA) ACTION PANEL -->
+{% if session.get('user_role') == 'regional_admin' %}
+  <div class="card" style="border: 2px solid var(--accent);">
+    <div class="card-header" style="background-color: var(--accent-light);">
+      <h3 style="color: var(--accent);">🏛️ Regional Administrator (MEA) Verification Portal</h3>
+    </div>
+    <div class="card-body">
+      <form method="POST" action="{{ url_for('regional_verify', app_id=application.id) }}">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div class="form-group">
+            <label class="form-label">Regional Clearance Decision *</label>
+            <select name="decision" class="form-select" required>
+              <option value="verified" selected>Approved / Verified Clean</option>
+              <option value="flagged">Flag for Investigation</option>
+              <option value="rejected">Reject Application</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Verification Checks</label>
+            <div style="display: flex; gap: 1.5rem; margin-top: 0.5rem;">
+              <label><input type="checkbox" name="data_validated" checked> Structural Data Validated</label>
+              <label><input type="checkbox" name="identity_confirmed" checked> Identity Documents Confirmed</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Regional Officer Remarks / Findings</label>
+          <textarea name="remarks" class="form-control" rows="2" placeholder="Enter regional office verification notes"></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Submit Regional Clearance Report</button>
+      </form>
+    </div>
+  </div>
+{% endif %}
+
+<!-- 4. LOCAL POLICE ACTION PANEL -->
+{% if session.get('user_role') == 'police' %}
+  <div class="card" style="border: 2px solid #3730a3;">
+    <div class="card-header" style="background-color: #e0e7ff;">
+      <h3 style="color: #3730a3;">👮 Submit Police Verification Report (PVR)</h3>
+    </div>
+    <div class="card-body">
+      <form method="POST" action="{{ url_for('police_submit_report', app_id=application.id) }}">
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div class="form-group">
+            <label class="form-label">PVR Status Recommendation *</label>
+            <select name="verification_status" class="form-select" required>
+              <option value="clear" selected>CLEAR (Recommended for Passport)</option>
+              <option value="adverse">ADVERSE (Field Check Failed / Criminal History)</option>
+              <option value="incomplete">INCOMPLETE (Applicant Not Present / Needs Details)</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="grid-column: span 2;">
+            <label class="form-label">Physical Inspection Checkboxes</label>
+            <div style="display: flex; gap: 2rem; margin-top: 0.5rem;">
+              <label><input type="checkbox" name="address_verified" checked> Physical Residence Address Verified</label>
+              <label style="color: red;"><input type="checkbox" name="criminal_records_found"> Criminal History Records Found</label>
+            </div>
+          </div>
+        </div>
+
+        <h4 style="margin-top: 1rem; margin-bottom: 0.5rem; font-size: 0.95rem; color: var(--text-muted);">Neighbor Witness Verification Details</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label">Witness 1 Name</label>
+            <input type="text" name="witness1_name" class="form-control" placeholder="Neighbor 1 Name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Witness 1 Phone</label>
+            <input type="text" name="witness1_contact" class="form-control" placeholder="Phone Number">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Witness 2 Name</label>
+            <input type="text" name="witness2_name" class="form-control" placeholder="Neighbor 2 Name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Witness 2 Phone</label>
+            <input type="text" name="witness2_contact" class="form-control" placeholder="Phone Number">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Police Officer Field Inspection Remarks *</label>
+          <textarea name="remarks" class="form-control" rows="2" required placeholder="Enter police field report findings, character assessment, and duration of residence verification"></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Submit Official PVR Report</button>
+      </form>
+    </div>
+  </div>
+{% endif %}
+
+<!-- Application Details Summary Card -->
+<div class="card">
+  <div class="card-header">
+    <h3>Submitted Application Form Details</h3>
+  </div>
+  <div class="card-body">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+      <div>
+        <h4 style="color: var(--primary); margin-bottom: 0.5rem;">Personal Info</h4>
+        <p><strong>Full Name:</strong> {{ application.given_name }} {{ application.surname }}</p>
+        <p><strong>Date of Birth:</strong> {{ application.dob.strftime('%Y-%m-%d') }}</p>
+        <p><strong>Gender:</strong> {{ application.gender }}</p>
+        <p><strong>Place of Birth:</strong> {{ application.place_of_birth }}</p>
+      </div>
+
+      <div>
+        <h4 style="color: var(--primary); margin-bottom: 0.5rem;">Identification Records</h4>
+        <p><strong>Aadhaar Card:</strong> <code>{{ application.aadhaar_number or 'N/A' }}</code></p>
+        <p><strong>PAN Card:</strong> <code>{{ application.pan_number or 'N/A' }}</code></p>
+        <p><strong>Voter ID:</strong> <code>{{ application.voter_id or 'N/A' }}</code></p>
+      </div>
+
+      <div>
+        <h4 style="color: var(--primary); margin-bottom: 0.5rem;">Family Info</h4>
+        <p><strong>Father's Name:</strong> {{ application.father_name or 'N/A' }}</p>
+        <p><strong>Mother's Name:</strong> {{ application.mother_name or 'N/A' }}</p>
+        <p><strong>Spouse Name:</strong> {{ application.spouse_name or 'N/A' }}</p>
+      </div>
+
+      <div>
+        <h4 style="color: var(--primary); margin-bottom: 0.5rem;">Address & Police Station</h4>
+        <p><strong>Present Address:</strong> {{ application.present_address }}</p>
+        <p><strong>PIN Code:</strong> <code>{{ application.pin_code }}</code></p>
+        <p><strong>Police Station:</strong> {{ application.police_station_name }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Uploaded Proof Documents -->
+<div class="card">
+  <div class="card-header">
+    <h3>Uploaded Identity & Address Documents</h3>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    {% if application.documents %}
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Document Type</th>
+              <th>Original File Name</th>
+              <th>Upload Date</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for doc in application.documents %}
+              <tr>
+                <td><strong>{{ doc.doc_type.replace('_', ' ').title() }}</strong></td>
+                <td>{{ doc.original_filename }}</td>
+                <td>{{ doc.uploaded_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>
+                  <a href="{{ url_for('serve_upload', filename=doc.file_name) }}" target="_blank" class="btn btn-sm btn-outline">View / Download Proof</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="padding: 2rem; text-align: center; color: var(--text-muted);">
+        <p>No document proof attachments uploaded for this application.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Multi-Department Audit Trail History -->
+<div class="card">
+  <div class="card-header">
+    <h3>📜 Lifecycle Audit Log & Verification History</h3>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    {% if audit_logs %}
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Actor Name</th>
+              <th>Actor Role</th>
+              <th>Action Completed</th>
+              <th>Notes / Remarks</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for log in audit_logs %}
+              <tr>
+                <td>{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                <td><strong>{{ log.actor_name }}</strong></td>
+                <td><span class="role-pill">{{ log.actor_role }}</span></td>
+                <td><strong>{{ log.action }}</strong></td>
+                <td>{{ log.notes or 'N/A' }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="padding: 2rem; text-align: center; color: var(--text-muted);">
+        <p>No audit trail logs recorded yet.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}

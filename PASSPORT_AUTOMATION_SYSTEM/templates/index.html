@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}Passport Automation System - Home{% endblock %}
+
+{% block content %}
+<div class="card" style="background: linear-gradient(135deg, #1e3a8a, #0f172a); color: white; border: none; margin-bottom: 2rem;">
+  <div class="card-body" style="padding: 3rem 2rem; text-align: center;">
+    <h1 style="font-size: 2.5rem; margin-bottom: 1rem; font-weight: 800;">Digitized Passport Lifecycle Management</h1>
+    <p style="font-size: 1.15rem; max-width: 800px; margin: 0 auto 2rem auto; color: #cbd5e1;">
+      Fast, transparent, and centralized processing for new passport applications, renewals, multi-department verification, police background checks, and automated document issuance.
+    </p>
+    
+    <div style="display: flex; gap: 1rem; justify-content: center;">
+      {% if session.get('user_id') %}
+        <a href="{{ url_for('dashboard') }}" class="btn btn-primary" style="background-color: var(--accent); border: none; font-size: 1rem; padding: 0.8rem 1.75rem;">Go to Your Dashboard</a>
+      {% else %}
+        <a href="{{ url_for('register') }}" class="btn btn-primary" style="background-color: var(--accent); border: none; font-size: 1rem; padding: 0.8rem 1.75rem;">Apply for Passport Online</a>
+        <a href="{{ url_for('login') }}" class="btn btn-outline" style="color: white; border-color: white; font-size: 1rem; padding: 0.8rem 1.75rem;">Actor Login</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Quick Tracking Lookup Widget -->
+<div class="card" style="margin-bottom: 2.5rem;">
+  <div class="card-header" style="background-color: var(--accent-light);">
+    <h3 style="color: var(--accent);"><span style="margin-right: 0.5rem;">🔍</span> Live Application Status Tracker</h3>
+  </div>
+  <div class="card-body">
+    <p style="color: var(--text-muted); margin-bottom: 1rem;">Track the real-time status of your submitted application without logging in:</p>
+    <div style="display: flex; gap: 1rem; max-width: 600px;">
+      <input type="text" id="track-app-num" class="form-control" placeholder="Enter Application Number (e.g. PAS-2026-104821)">
+      <button type="button" id="track-btn" class="btn btn-primary" style="white-space: nowrap;">Track Status</button>
+    </div>
+    <div id="track-result-container" style="margin-top: 1.5rem; display: none;"></div>
+  </div>
+</div>
+
+<!-- System Statistics Metrics -->
+<div class="metrics-grid">
+  <div class="metric-card">
+    <span class="title">Total System Applications</span>
+    <span class="value">{{ total_apps }}</span>
+  </div>
+  <div class="metric-card">
+    <span class="title">Applications Pending Review</span>
+    <span class="value" style="color: var(--accent);">{{ pending_apps }}</span>
+  </div>
+  <div class="metric-card">
+    <span class="title">Passports Successfully Issued</span>
+    <span class="value" style="color: #10b981;">{{ issued_apps }}</span>
+  </div>
+</div>
+
+<!-- Workflow Stepper Overview -->
+<div class="card">
+  <div class="card-header">
+    <h3>Standard 4-Step Verification Workflow</h3>
+  </div>
+  <div class="card-body">
+    <div class="stepper">
+      <div class="step completed">
+        <div class="step-circle">1</div>
+        <div class="step-label">1. Online Registration & Proof Upload</div>
+      </div>
+      <div class="step completed">
+        <div class="step-circle">2</div>
+        <div class="step-label">2. Automated DB Checks</div>
+      </div>
+      <div class="step completed">
+        <div class="step-circle">3</div>
+        <div class="step-label">3. Regional MEA & Police Verification</div>
+      </div>
+      <div class="step completed">
+        <div class="step-circle">4</div>
+        <div class="step-label">4. Appointment, Approval & Dispatch</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Core Actor Portals Grid -->
+<h3 style="margin-bottom: 1rem; color: var(--primary-dark);">Core System Modules & Stakeholders</h3>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+  <div class="card">
+    <div class="card-body">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem;">👤</div>
+      <h4 style="color: var(--primary-dark); margin-bottom: 0.5rem;">1. Applicant Module</h4>
+      <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">
+        Submit online application form, upload Identity/Address proofs, track verification timeline, and schedule passport office appointments.
+      </p>
+      <a href="{{ url_for('login', role='applicant') }}" class="btn btn-sm btn-primary">Applicant Portal Login</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem;">🛂</div>
+      <h4 style="color: var(--primary-dark); margin-bottom: 0.5rem;">2. Passport Administrator</h4>
+      <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">
+        Review incoming applications, run automated DB checks, schedule appointment slots, grant final approval, generate Passport Numbers, and clear for Speed Post dispatch.
+      </p>
+      <a href="{{ url_for('login', role='admin') }}" class="btn btn-sm btn-primary">Passport Admin Login</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem;">🏛️</div>
+      <h4 style="color: var(--primary-dark); margin-bottom: 0.5rem;">3. Regional Admin (MEA)</h4>
+      <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">
+        Performs secondary data validation, regional jurisdiction structural checks, cross-verifies document authenticity, and flags adverse records at the regional office level.
+      </p>
+      <a href="{{ url_for('login', role='regional_mea') }}" class="btn btn-sm btn-primary">Regional MEA Login</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body">
+      <div style="font-size: 2rem; margin-bottom: 0.5rem;">👮</div>
+      <h4 style="color: var(--primary-dark); margin-bottom: 0.5rem;">4. Local Police Station</h4>
+      <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">
+        Receives automated police verification requests assigned by PIN code, conducts physical field address checks, inspects criminal history, and submits digital Police Verification Reports (PVR).
+      </p>
+      <a href="{{ url_for('login', role='police_officer') }}" class="btn btn-sm btn-primary">Police Portal Login</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

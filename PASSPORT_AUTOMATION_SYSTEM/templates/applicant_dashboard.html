@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block title %}Applicant Portal - PAS{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+  <div>
+    <h2>Applicant Dashboard</h2>
+    <p style="color: var(--text-muted);">Manage your passport applications, track progress, and upload documents.</p>
+  </div>
+  <button onclick="openModal('applyModal')" class="btn btn-primary">+ Apply for New Passport / Renewal</button>
+</div>
+
+<!-- Applications Table -->
+<div class="card">
+  <div class="card-header">
+    <h3>Your Passport Applications</h3>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    {% if applications %}
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Application #</th>
+              <th>Applicant Name</th>
+              <th>Type</th>
+              <th>Submission Date</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for app_item in applications %}
+              <tr>
+                <td><strong>{{ app_item.application_number }}</strong></td>
+                <td>{{ app_item.given_name }} {{ app_item.surname }}</td>
+                <td>
+                  <span class="badge" style="background-color: #f1f5f9; color: var(--text-main);">
+                    {{ app_item.application_type.upper() }}
+                  </span>
+                </td>
+                <td>{{ app_item.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>
+                  <span class="badge badge-{{ app_item.status }}">
+                    {{ app_item.status.replace('_', ' ').upper() }}
+                  </span>
+                </td>
+                <td>
+                  <a href="{{ url_for('application_detail', app_id=app_item.id) }}" class="btn btn-sm btn-outline">View Details & Tracker</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="padding: 3rem; text-align: center; color: var(--text-muted);">
+        <p style="font-size: 1.1rem; margin-bottom: 1rem;">You have not submitted any passport applications yet.</p>
+        <button onclick="openModal('applyModal')" class="btn btn-primary">Click Here to Apply Now</button>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Modal: Apply for Passport -->
+<div id="applyModal" class="modal-overlay" style="display: {% if show_modal %}flex{% else %}none{% endif %};">
+  <div class="modal-content" style="max-width: 800px;">
+    <div class="modal-header">
+      <h3>Passport Application Form</h3>
+      <button class="close-btn" onclick="closeModal('applyModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form method="POST" action="{{ url_for('apply_passport') }}" enctype="multipart/form-data">
+        
+        <h4 style="color: var(--primary); margin-bottom: 1rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem;">1. Application Type & Passport Options</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label">Application Type *</label>
+            <select name="application_type" class="form-select" required>
+              <option value="new" selected>Fresh Passport</option>
+              <option value="renewal">Re-issue / Renewal of Passport</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Passport Type *</label>
+            <select name="passport_type" class="form-select" required>
+              <option value="ordinary_36" selected>Ordinary (36 Pages)</option>
+              <option value="ordinary_60">Ordinary (60 Pages - Jumbo)</option>
+              <option value="official">Official Passport</option>
+              <option value="diplomatic">Diplomatic Passport</option>
+            </select>
+          </div>
+        </div>
+
+        <h4 style="color: var(--primary); margin-top: 1.5rem; margin-bottom: 1rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem;">2. Personal Information</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label">Given Name *</label>
+            <input type="text" name="given_name" class="form-control" required placeholder="First Name + Middle Name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Surname *</label>
+            <input type="text" name="surname" class="form-control" required placeholder="Last Name">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label">Date of Birth *</label>
+            <input type="date" name="dob" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Gender *</label>
+            <select name="gender" class="form-select" required>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Transgender">Transgender</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Place of Birth *</label>
+            <input type="text" name="place_of_birth" class="form-control" required placeholder="City / Town / Village">
+          </div>
+        </div>
+
+        <h4 style="color: var(--primary); margin-top: 1.5rem; margin-bottom: 1rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem;">3. National Identification & Family Details</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label">Aadhaar Card Number *</label>
+            <input type="text" name="aadhaar_number" class="form-control" required placeholder="12-digit Aadhaar">
+          </div>
+          <div class="form-group">
+            <label class="form-label">PAN Card Number</label>
+            <input type="text" name="pan_number" class="form-control" placeholder="10-character PAN">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Voter ID</label>
+            <input type="text" name="voter_id" class="form-control" placeholder="Voter ID Card No.">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label">Father's Full Name</label>
+            <input type="text" name="father_name" class="form-control" placeholder="Father's Name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Mother's Full Name</label>
+            <input type="text" name="mother_name" class="form-control" placeholder="Mother's Name">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Spouse Name (If applicable)</label>
+            <input type="text" name="spouse_name" class="form-control" placeholder="Spouse Name">
+          </div>
+        </div>
+
+        <h4 style="color: var(--primary); margin-top: 1.5rem; margin-bottom: 1rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem;">4. Address & Local Police Station Routing</h4>
+        <div class="form-group">
+          <label class="form-label">Present Residential Address *</label>
+          <textarea name="present_address" class="form-control" rows="2" required placeholder="Full street address, house no., locality"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Permanent Residential Address *</label>
+          <textarea name="permanent_address" class="form-control" rows="2" required placeholder="Same as present address or permanent address"></textarea>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label">PIN Code *</label>
+            <input type="text" name="pin_code" class="form-control" required placeholder="6-digit PIN Code (e.g. 110001)">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Local Police Station Name *</label>
+            <input type="text" name="police_station_name" class="form-control" required placeholder="Nearest Police Station for background check">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label">Emergency Contact Name</label>
+            <input type="text" name="emergency_contact_name" class="form-control" placeholder="Emergency contact person">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Emergency Contact Phone</label>
+            <input type="text" name="emergency_contact_phone" class="form-control" placeholder="Phone number">
+          </div>
+        </div>
+
+        <h4 style="color: var(--primary); margin-top: 1.5rem; margin-bottom: 1rem; border-bottom: 2px solid var(--border-color); padding-bottom: 0.5rem;">5. Upload Proof Documents</h4>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label">Identity Proof (Aadhaar/PAN) *</label>
+            <input type="file" name="identity_proof" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Address Proof *</label>
+            <input type="file" name="address_proof" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date of Birth Proof</label>
+            <input type="file" name="dob_proof" class="form-control">
+          </div>
+        </div>
+
+        <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+          <button type="button" onclick="closeModal('applyModal')" class="btn btn-secondary">Cancel</button>
+          <button type="submit" class="btn btn-primary" style="padding: 0.75rem 2rem;">Submit Application</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Passport Automation System - Register{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 2rem auto;">
+  <div class="card">
+    <div class="card-header" style="background-color: var(--primary-dark); color: white;">
+      <h3>Create System Account</h3>
+    </div>
+    <div class="card-body">
+      <form method="POST" action="{{ url_for('register') }}">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label" for="username">Username *</label>
+            <input type="text" id="username" name="username" class="form-control" required placeholder="Choose username">
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label" for="email">Email Address *</label>
+            <input type="email" id="email" name="email" class="form-control" required placeholder="name@example.com">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="full_name">Full Legal Name *</label>
+          <input type="text" id="full_name" name="full_name" class="form-control" required placeholder="As shown on official identity records">
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+          <div class="form-group">
+            <label class="form-label" for="phone">Mobile Phone Number</label>
+            <input type="text" id="phone" name="phone" class="form-control" placeholder="+91 9876543210">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="role">Account Role *</label>
+            <select id="role" name="role" class="form-select" required onchange="toggleAdminKeyField(this.value)">
+              <option value="applicant" selected>Applicant (Public)</option>
+              <option value="passport_admin">Passport Administrator (Restricted)</option>
+              <option value="regional_admin">Regional Administrator - MEA (Restricted)</option>
+              <option value="police">Local Police Officer (Restricted)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Dynamic Security Key Group for Admin Roles -->
+        <div id="admin-key-group" class="form-group" style="display: none; background-color: #fef3c7; padding: 1rem; border-radius: 8px; border: 1px solid #d97706;">
+          <label class="form-label" for="admin_code" style="color: #92400e; font-weight: bold;">🔒 Department Admin Authorization Key *</label>
+          <input type="password" id="admin_code" name="admin_code" class="form-control" placeholder="Enter official Admin Security Key (Default demo key: PAS-ADMIN-SECRET-2026)">
+          <small style="color: #b45309; margin-top: 0.35rem; display: block;">
+            <strong>Security Protection:</strong> Self-registration as an Administrator is restricted. You must provide an official department authorization key.
+          </small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="jurisdiction_pin">PIN Code / Jurisdiction Area</label>
+          <input type="text" id="jurisdiction_pin" name="jurisdiction_pin" class="form-control" placeholder="e.g. 110001 (Used for police/regional routing)">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Password *</label>
+          <input type="password" id="password" name="password" class="form-control" required placeholder="Minimum 6 characters">
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Register Account</button>
+      </form>
+
+      <div style="margin-top: 1.5rem; text-align: center; font-size: 0.9rem;">
+        Already registered? <a href="{{ url_for('login') }}">Login here</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleAdminKeyField(roleVal) {
+  const keyGroup = document.getElementById('admin-key-group');
+  if (roleVal !== 'applicant') {
+    keyGroup.style.display = 'block';
+  } else {
+    keyGroup.style.display = 'none';
+  }
+}
+</script>
+{% endblock %}

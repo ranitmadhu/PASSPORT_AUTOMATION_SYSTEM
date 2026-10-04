@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Regional Administrator (MEA) Portal - PAS{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+  <div>
+    <h2>Regional MEA Administrator Portal</h2>
+    <p style="color: var(--text-muted);">Perform secondary data validation, regional jurisdiction structural checks, and document verification.</p>
+  </div>
+</div>
+
+<!-- Pending Regional Verification Queue -->
+<div class="card">
+  <div class="card-header" style="background-color: var(--accent-light);">
+    <h3 style="color: var(--accent);">Pending Regional Clearance Queue</h3>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    {% if pending_apps %}
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>App #</th>
+              <th>Applicant Name</th>
+              <th>DOB & Gender</th>
+              <th>Place of Birth</th>
+              <th>Present Address</th>
+              <th>PIN Code</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for app_item in pending_apps %}
+              <tr>
+                <td><strong>{{ app_item.application_number }}</strong></td>
+                <td>{{ app_item.given_name }} {{ app_item.surname }}</td>
+                <td>{{ app_item.dob.strftime('%Y-%m-%d') }} ({{ app_item.gender }})</td>
+                <td>{{ app_item.place_of_birth }}</td>
+                <td>{{ app_item.present_address }}</td>
+                <td><code>{{ app_item.pin_code }}</code></td>
+                <td>
+                  <a href="{{ url_for('application_detail', app_id=app_item.id) }}" class="btn btn-sm btn-primary">📄 Review Docs ({{ app_item.documents|length }})</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="padding: 3rem; text-align: center; color: var(--text-muted);">
+        <p style="font-size: 1.1rem;">No applications currently pending regional MEA clearance.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Processed Applications History -->
+<div class="card">
+  <div class="card-header">
+    <h3>Recently Processed Regional Verifications</h3>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    {% if processed_apps %}
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>App #</th>
+              <th>Applicant Name</th>
+              <th>Regional Decision</th>
+              <th>Remarks</th>
+              <th>Verification Date</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for app_item in processed_apps %}
+              <tr>
+                <td><strong>{{ app_item.application_number }}</strong></td>
+                <td>{{ app_item.given_name }} {{ app_item.surname }}</td>
+                <td>
+                  {% if app_item.regional_verification.verification_status == 'verified' %}
+                    <span class="badge badge-regional_approved">VERIFIED</span>
+                  {% elif app_item.regional_verification.verification_status == 'flagged' %}
+                    <span class="badge badge-regional_flagged">FLAGGED</span>
+                  {% else %}
+                    <span class="badge badge-rejected">REJECTED</span>
+                  {% endif %}
+                </td>
+                <td>{{ app_item.regional_verification.remarks or 'N/A' }}</td>
+                <td>{{ app_item.regional_verification.verified_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td>
+                  <a href="{{ url_for('application_detail', app_id=app_item.id) }}" class="btn btn-sm btn-outline">View Record</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="padding: 2rem; text-align: center; color: var(--text-muted);">
+        <p>No regional verifications logged by your officer account yet.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

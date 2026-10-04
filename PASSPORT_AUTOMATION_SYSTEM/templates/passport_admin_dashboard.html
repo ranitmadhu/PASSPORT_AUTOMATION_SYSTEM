@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Passport Administrator Control Panel - PAS{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+  <div>
+    <h2>Passport Administrator Control Center</h2>
+    <p style="color: var(--text-muted);">Manage centralized passport processing, automated database checks, regional/police routing, and document issuance.</p>
+  </div>
+</div>
+
+<!-- Metrics Cards -->
+<div class="metrics-grid">
+  <div class="metric-card">
+    <span class="title">Total Applications</span>
+    <span class="value">{{ total }}</span>
+  </div>
+  <div class="metric-card">
+    <span class="title">Pending Initial Review</span>
+    <span class="value" style="color: var(--accent);">{{ submitted }}</span>
+  </div>
+  <div class="metric-card">
+    <span class="title">Under Active Verification</span>
+    <span class="value" style="color: var(--primary-light);">{{ in_verification }}</span>
+  </div>
+  <div class="metric-card">
+    <span class="title">Cleared for Approval</span>
+    <span class="value" style="color: #10b981;">{{ ready_for_issuance }}</span>
+  </div>
+  <div class="metric-card">
+    <span class="title">Passports Issued</span>
+    <span class="value" style="color: #059669;">{{ issued }}</span>
+  </div>
+</div>
+
+<!-- Search & Status Filter Toolbar -->
+<div class="card" style="margin-bottom: 1.5rem;">
+  <div class="card-body" style="padding: 1rem 1.5rem;">
+    <form method="GET" action="{{ url_for('passport_admin_dashboard') }}" style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 250px;">
+        <input type="text" name="q" value="{{ search_query }}" class="form-control" placeholder="Search by App #, Name, or Aadhaar...">
+      </div>
+      
+      <div style="min-width: 200px;">
+        <select name="status" class="form-select" onchange="this.form.submit()">
+          <option value="all" {% if selected_status == 'all' %}selected{% endif %}>All Statuses</option>
+          <option value="submitted" {% if selected_status == 'submitted' %}selected{% endif %}>Submitted (Initial)</option>
+          <option value="initial_check_passed" {% if selected_status == 'initial_check_passed' %}selected{% endif %}>Initial DB Check Passed</option>
+          <option value="regional_review_pending" {% if selected_status == 'regional_review_pending' %}selected{% endif %}>Regional Review Pending</option>
+          <option value="police_verification_pending" {% if selected_status == 'police_verification_pending' %}selected{% endif %}>Police Verification Pending</option>
+          <option value="police_approved" {% if selected_status == 'police_approved' %}selected{% endif %}>Police Approved</option>
+          <option value="passport_issued" {% if selected_status == 'passport_issued' %}selected{% endif %}>Passport Issued</option>
+          <option value="dispatched" {% if selected_status == 'dispatched' %}selected{% endif %}>Dispatched</option>
+          <option value="rejected" {% if selected_status == 'rejected' %}selected{% endif %}>Rejected</option>
+        </select>
+      </div>
+
+      <button type="submit" class="btn btn-primary">Search</button>
+      {% if search_query or selected_status != 'all' %}
+        <a href="{{ url_for('passport_admin_dashboard') }}" class="btn btn-secondary">Reset Filters</a>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+<!-- Master Applications Table -->
+<div class="card">
+  <div class="card-header">
+    <h3>Master Application Processing Queue</h3>
+  </div>
+  <div class="card-body" style="padding: 0;">
+    {% if applications %}
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>App #</th>
+              <th>Applicant Name</th>
+              <th>Aadhaar Number</th>
+              <th>PIN / Police Station</th>
+              <th>Auto DB Check</th>
+              <th>Current Status</th>
+              <th>Quick Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for app_item in applications %}
+              <tr>
+                <td><strong>{{ app_item.application_number }}</strong></td>
+                <td>{{ app_item.given_name }} {{ app_item.surname }}</td>
+                <td><code>{{ app_item.aadhaar_number }}</code></td>
+                <td>{{ app_item.pin_code }} ({{ app_item.police_station_name }})</td>
+                <td>
+                  {% if app_item.auto_check_status == 'passed' %}
+                    <span class="badge badge-police_approved">PASSED</span>
+                  {% elif app_item.auto_check_status == 'flagged' %}
+                    <span class="badge badge-initial_check_failed">FLAGGED</span>
+                  {% else %}
+                    <span class="badge badge-submitted">PENDING</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <span class="badge badge-{{ app_item.status }}">
+                    {{ app_item.status.replace('_', ' ').upper() }}
+                  </span>
+                </td>
+                <td>
+                  <div style="display: flex; gap: 0.35rem; flex-wrap: wrap;">
+                    <a href="{{ url_for('application_detail', app_id=app_item.id) }}" class="btn btn-sm btn-outline">📄 View Docs ({{ app_item.documents|length }})</a>
+                    
+                    {% if app_item.status == 'submitted' %}
+                      <form method="POST" action="{{ url_for('run_auto_check', app_id=app_item.id) }}" style="display:inline;">
+                        <button type="submit" class="btn btn-sm btn-primary">Run DB Check</button>
+                      </form>
+                    {% endif %}
+
+                    {% if app_item.status == 'initial_check_passed' %}
+                      <form method="POST" action="{{ url_for('route_to_regional', app_id=app_item.id) }}" style="display:inline;">
+                        <button type="submit" class="btn btn-sm btn-secondary">Route to MEA</button>
+                      </form>
+                      <form method="POST" action="{{ url_for('route_to_police', app_id=app_item.id) }}" style="display:inline;">
+                        <button type="submit" class="btn btn-sm btn-primary">Route to Police</button>
+                      </form>
+                    {% endif %}
+
+                    {% if app_item.status in ['police_approved', 'regional_approved'] %}
+                      <form method="POST" action="{{ url_for('approve_and_issue', app_id=app_item.id) }}" style="display:inline;">
+                        <button type="submit" class="btn btn-sm btn-success">Issue Passport</button>
+                      </form>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="padding: 3rem; text-align: center; color: var(--text-muted);">
+        <p style="font-size: 1.1rem;">No passport applications match the specified criteria.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

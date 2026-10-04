@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Passport Automation System - Login{% endblock %}
+
+{% block content %}
+{% set role_param = request.args.get('role', request.args.get('prefill', '')) %}
+{% set prefill_username = '' %}
+{% if role_param in ['applicant'] %}{% set prefill_username = 'applicant' %}
+{% elif role_param in ['passport_admin', 'admin'] %}{% set prefill_username = 'admin' %}
+{% elif role_param in ['regional_admin', 'regional_mea'] %}{% set prefill_username = 'regional_mea' %}
+{% elif role_param in ['police', 'police_officer'] %}{% set prefill_username = 'police_officer' %}
+{% endif %}
+
+<div style="max-width: 480px; margin: 3rem auto;">
+  <div class="card">
+    <div class="card-header" style="background-color: var(--primary-dark); color: white;">
+      <h3>System Actor Login</h3>
+    </div>
+    <div class="card-body">
+      <form method="POST" action="{{ url_for('login') }}">
+        <div class="form-group">
+          <label class="form-label" for="username">Username</label>
+          <input type="text" id="username" name="username" class="form-control" required placeholder="Enter username" value="{{ prefill_username }}">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label" for="password">Password</label>
+          <input type="password" id="password" name="password" class="form-control" required placeholder="Enter password" value="{% if prefill_username %}password123{% endif %}">
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">Log In</button>
+      </form>
+
+      <div style="margin-top: 1.5rem; text-align: center; font-size: 0.9rem;">
+        Don't have an applicant account? <a href="{{ url_for('register') }}">Register here</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Role Quick Login Helper Card -->
+  <div class="card" style="background-color: #f8fafc; border-style: dashed;">
+    <div class="card-body" style="font-size: 0.85rem;">
+      <h4 style="margin-bottom: 0.5rem; color: var(--primary-dark);">💡 Select Role Account to Log In:</h4>
+      <div style="display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.5rem;">
+        <a href="{{ url_for('login', role='applicant') }}" class="btn btn-sm btn-outline" style="text-align: left;">👤 <strong>Applicant Login</strong> (<code>applicant</code>)</a>
+        <a href="{{ url_for('login', role='admin') }}" class="btn btn-sm btn-outline" style="text-align: left;">Passport Admin Login (<code>admin</code>)</a>
+        <a href="{{ url_for('login', role='regional_mea') }}" class="btn btn-sm btn-outline" style="text-align: left;">🏛️ <strong>Regional MEA Login</strong> (<code>regional_mea</code>)</a>
+        <a href="{{ url_for('login', role='police_officer') }}" class="btn btn-sm btn-outline" style="text-align: left;">👮 <strong>Local Police Login</strong> (<code>police_officer</code>)</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
